@@ -1,0 +1,47 @@
+name: Build Native Library
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r25b
+          add-to-path: true
+
+      - name: Build arm64-v8a
+        run: |
+          mkdir -p build/arm64-v8a
+          cd build/arm64-v8a
+          $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++ \
+            -shared -fPIC -O2 -o libnative-lib.so \
+            -I$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include \
+            ../../native-lib.cpp
+
+      - name: Build armeabi-v7a
+        run: |
+          mkdir -p build/armeabi-v7a
+          cd build/armeabi-v7a
+          $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang++ \
+            -shared -fPIC -O2 -o libnative-lib.so \
+            -I$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include \
+            ../../native-lib.cpp
+
+      - name: Upload .so files
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-libs
+          path: |
+            build/arm64-v8a/libnative-lib.so
+            build/armeabi-v7a/libnative-lib.so
+          retention-days: 30
